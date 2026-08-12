@@ -1,4 +1,4 @@
-import { Application, Graphics } from 'pixi.js';
+import { Application, Graphics, Text } from 'pixi.js';
 
 const app = new Application();
 
@@ -54,6 +54,26 @@ app.stage.addChild(ball);
 let ballVelX = -BALL_SPEED;
 let ballVelY = 30;
 
+let scoreL = 0;
+let scoreR = 0;
+
+const scoreText = new Text({
+  text: '0 : 0',
+  style: { fill: 0xffffff, fontSize: 64, fontFamily: 'monospace' },
+});
+scoreText.anchor.set(0.5);
+scoreText.x = 960;
+scoreText.y = 80;
+app.stage.addChild(scoreText);
+
+function serve(dir) {
+  ball.x = 960;
+  ball.y = 540;
+  ballVelX = BALL_SPEED * dir;
+  ballVelY = (Math.random() * 2 - 1) * 60;
+  scoreText.text = `${scoreL} : ${scoreR}`;
+}
+
 app.ticker.add((ticker) => {
   const dt = ticker.deltaMS / 1000;
 
@@ -87,6 +107,6 @@ app.ticker.add((ticker) => {
 
   if (ball.y < BALL_HALF) { ball.y = BALL_HALF; ballVelY = -ballVelY; }
   if (ball.y > 1080 - BALL_HALF) { ball.y = 1080 - BALL_HALF; ballVelY = -ballVelY; }
-  if (ball.x < BALL_HALF) { ball.x = BALL_HALF; ballVelX = -ballVelX; }
-  if (ball.x > 1920 - BALL_HALF) { ball.x = 1920 - BALL_HALF; ballVelX = -ballVelX; }
+  if (ball.x < -BALL_HALF) { scoreR++; serve(-1); }
+  if (ball.x > 1920 + BALL_HALF) { scoreL++; serve(1); }
 });
