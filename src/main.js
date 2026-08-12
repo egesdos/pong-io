@@ -11,22 +11,30 @@ await app.init({
 
 document.body.appendChild(app.canvas);
 
-const paddle = new Graphics();
-paddle.rect(-12, -100, 24, 200).fill(0x00f0ff);
-paddle.x = 48;
-paddle.y = 540;
-app.stage.addChild(paddle);
+function createPaddle(x, upKey, downKey, side) {
+  const shape = new Graphics();
+  shape.rect(-12, -100, 24, 200).fill(0x00f0ff);
+  shape.x = x;
+  shape.y = 540;
+  app.stage.addChild(shape);
+
+  return { shape: shape, upKey: upKey, downKey: downKey, side: side };
+}
+
+const paddles = [
+  createPaddle(48, 'KeyW', 'KeyS', 1),
+  createPaddle(1872, 'ArrowUp', 'ArrowDown', -1),
+];
 
 const keys = {};
-window.addEventListener('keydown', (event) => { keys[event.code] = true; });
-window.addEventListener('keyup', (event) => { keys[event.code] = false; });
-
-//ok tuşlarının sayfayı kaydırmasını engelle
 window.addEventListener('keydown', (event) => {
   if (['ArrowUp', 'ArrowDown', 'Space'].includes(event.code)) {
     event.preventDefault()
-    keys[event.code] = true
   }
+  keys[event.code] = true
+});
+window.addEventListener('keyup', (event) => {
+  keys[event.code] = false;
 });
 
 const PADDLE_SPEED = 500;
@@ -49,32 +57,34 @@ let ballVelY = 30;
 app.ticker.add((ticker) => {
   const dt = ticker.deltaMS / 1000;
 
-  let dir = 0;
-  if (keys['ArrowUp']) dir -= 1;
-  if (keys['ArrowDown']) dir += 1;
+  for (const p of paddles) {
+    let dir = 0;
+    if (keys[p.upKey]) dir -= 1;
+    if (keys[p.downKey]) dir += 1;
 
-  paddle.y += dir * PADDLE_SPEED * dt;
+    p.shape.y += dir * PADDLE_SPEED * dt;
 
-  //bounce
-  const hitX = ball.x - BALL_HALF < paddle.x + PADDLE_HALF_W &&
-    ball.x + BALL_HALF > paddle.x - PADDLE_HALF_W;
-  const hitY = ball.y + BALL_HALF > paddle.y - PADDLE_HALF &&
-    ball.y - BALL_HALF < paddle.y + PADDLE_HALF;
-
-  if (hitX && hitY && ballVelX < 0) {
-    ball.x = paddle.x + PADDLE_HALF_W + BALL_HALF;
-    ballVelX = -ballVelX * BOUNCE_PENALTY;
-    ballVelY = ballVelY * BOUNCE_PENALTY;
+    if (p.shape.y < PADDLE_HALF) p.shape.y = PADDLE_HALF;
+    if (p.shape.y > 1080 - PADDLE_HALF) p.shape.y = 1080 - PADDLE_HALF;
   }
-
-  //paddle sınırları
-  if (paddle.y < PADDLE_HALF) paddle.y = PADDLE_HALF;
-  if (paddle.y > 1080 - PADDLE_HALF) paddle.y = 1080 - PADDLE_HALF;
 
   ball.x += ballVelX * dt;
   ball.y += ballVelY * dt;
 
-  //top sınırları
+
+  for (const p of paddles) {
+    const hitX = ball.x - BALL_HALF < p.shape.x + PADDLE_HALF_W &&
+      ball.x + BALL_HALF > p.shape.x - PADDLE_HALF_W;
+    const hitY = ball.y + BALL_HALF > p.shape.y - PADDLE_HALF &&
+      ball.y - BALL_HALF < p.shape.y + PADDLE_HALF;
+
+    if (hitX && hitY && ballVelX * p.side < 0) {
+      ball.x = p.shape.x + p.side * (PADDLE_HALF_W + BALL_HALF);
+      ballVelX = -ballVelX * BOUNCE_PENALTY;
+      ballVelY = ballVelY * BOUNCE_PENALTY;
+    }
+  }
+
   if (ball.y < BALL_HALF) { ball.y = BALL_HALF; ballVelY = -ballVelY; }
   if (ball.y > 1080 - BALL_HALF) { ball.y = 1080 - BALL_HALF; ballVelY = -ballVelY; }
   if (ball.x < BALL_HALF) { ball.x = BALL_HALF; ballVelX = -ballVelX; }
